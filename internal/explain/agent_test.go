@@ -27,6 +27,10 @@ func (f *fakeLLM) StreamCompletion(req llm.ChatRequest, cb func(chunk []byte) er
 	return nil
 }
 
+func (f *fakeLLM) StreamCompletionWithCtx(ctx context.Context, req llm.ChatRequest, cb func(chunk []byte) error) error {
+	return nil
+}
+
 func (f *fakeLLM) next() *llm.ChatResponse {
 	if f.idx >= len(f.responses) {
 		return f.responses[len(f.responses)-1]

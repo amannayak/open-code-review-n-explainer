@@ -1,0 +1,8 @@
+{
+  "name": "open-code-review-n-explainer",
+  "version": "1.0.0",
+  "ocrConfig": {
+    "urlPattern": "https://github.com/alibaba/open-code-review/releases/download/v{version}/opencodereview-{os}-{arch}",
+    "checksumPattern": "https://github.com/alibaba/open-code-review/releases/download/v{version}/sha256sum.txt"
+  }
+}

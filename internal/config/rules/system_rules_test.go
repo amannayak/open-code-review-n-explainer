@@ -57,23 +57,23 @@ func TestResolve_DefaultRules(t *testing.T) {
 		path       string
 		wantSubstr string // substring that should appear in the matched rule
 	}{
-		{"src/main/java/com/example/foo.java", "逻辑错误识别"},
-		{"foo.java", "逻辑错误识别"},
-		{"src/main/resources/mapper/usermapper.xml", "SQL逻辑错误识别"},
-		{"src/main/resources/dao/userdao.xml", "SQL逻辑错误识别"},
+		{"src/main/java/com/example/foo.java", "Logic Error Detection"},
+		{"foo.java", "Logic Error Detection"},
+		{"src/main/resources/mapper/usermapper.xml", "SQL Logic Error Detection"},
+		{"src/main/resources/dao/userdao.xml", "SQL Logic Error Detection"},
 		{"pom.xml", "snapshot"},
 		{"submodule/pom.xml", "snapshot"},
-		{"src/main/resources/application.properties", "配置错误识别"},
+		{"src/main/resources/application.properties", "Configuration Error Detection"},
 		{"frontend/package.json", "latest"},
 		{"config/app.yaml", "yaml-key"},
 		{"deploy/values.yml", "yaml-key"},
 		{"src/components/app.tsx", "React"},
 		{"lib/utils.ts", "TypeScript"},
-		{"app.kt", "空安全"},
-		{"src/main/handler.cpp", "智能指针"},
+		{"app.kt", "Null Safety"},
+		{"src/main/handler.cpp", "smart pointer"},
 		{"driver.c", "malloc"},
-		{"pages/Index.ets", "状态装饰器"},
-		{"components/Button.ets", "状态装饰器"},
+		{"pages/Index.ets", "State Decorator"},
+		{"components/Button.ets", "State Decorator"},
 		{"entry/src/main/module.json5", "json-key"},
 		{"entry/oh-package.json5", "json-key"},
 	}
@@ -186,7 +186,7 @@ func TestNewResolver_DefaultOnly(t *testing.T) {
 		t.Fatalf("NewResolver: %v", err)
 	}
 	got := resolver.Resolve("src/main.java")
-	if !strings.Contains(got, "逻辑错误识别") {
+	if !strings.Contains(got, "Logic Error Detection") {
 		t.Errorf("expected system default java rule, got %q", truncate(got, 80))
 	}
 }
@@ -224,7 +224,7 @@ func TestNewResolver_ProjectRuleHighestPriority(t *testing.T) {
 		want string
 	}{
 		{"force-api/src/foo.java", "project-java-rule"},
-		{"other/src/bar.java", "逻辑错误识别"},
+		{"other/src/bar.java", "Logic Error Detection"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
@@ -559,7 +559,7 @@ func TestResolveDetail_SystemPatternMatch(t *testing.T) {
 	if detail.Pattern != "**/*.java" {
 		t.Errorf("expected pattern '**/*.java', got %q", detail.Pattern)
 	}
-	if !strings.Contains(detail.Rule, "逻辑错误识别") {
+	if !strings.Contains(detail.Rule, "Logic Error Detection") {
 		t.Errorf("expected java rule, got %q", truncate(detail.Rule, 80))
 	}
 }
