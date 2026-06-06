@@ -1,0 +1,15 @@
+# Files this fork owns — always keep our version when merging from upstream
+README.md                                    merge=ours
+README.zh-CN.md                              merge=ours
+CONTRIBUTING.md                              merge=ours
+imgs/image.png                               merge=ours
+.claude-plugin/marketplace.json              merge=ours
+plugins/open-code-review/.claude-plugin/plugin.json merge=ours
+plugins/open-code-review/commands/explain.md merge=ours
+skills/open-code-review-n-explainer/SKILL.md merge=ours
+
+# Explain feature — entirely new in this fork
+cmd/opencodereview/explain_cmd.go            merge=ours
+cmd/opencodereview/explain_flags_test.go     merge=ours
+cmd/opencodereview/setup_cmd.go              merge=ours
+internal/explain/**                          merge=ours
