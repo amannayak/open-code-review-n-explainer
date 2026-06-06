@@ -8,13 +8,16 @@ type Tool struct {
 }
 
 var (
-	Unknown      = Tool{name: "unknown"}
-	TaskDone     = Tool{name: "task_done"}
-	CodeComment  = Tool{name: "code_comment"}
-	FileRead     = Tool{name: "file_read"}
-	FileFind     = Tool{name: "file_find"}
-	FileReadDiff = Tool{name: "file_read_diff"}
-	CodeSearch   = Tool{name: "code_search"}
+	Unknown        = Tool{name: "unknown"}
+	TaskDone       = Tool{name: "task_done"}
+	CodeComment    = Tool{name: "code_comment"}
+	ExplainResult  = Tool{name: "explain_result"}
+	FileRead       = Tool{name: "file_read"}
+	FileFind       = Tool{name: "file_find"}
+	FileReadDiff   = Tool{name: "file_read_diff"}
+	CodeSearch     = Tool{name: "code_search"}
+	GraphQuery     = Tool{name: "graph_query"}
+	GraphNeighbors = Tool{name: "graph_neighbors"}
 )
 
 func OfName(name string) Tool {
@@ -27,7 +30,7 @@ func OfName(name string) Tool {
 }
 
 func allTools() []Tool {
-	return []Tool{Unknown, TaskDone, CodeComment, FileRead, FileFind, FileReadDiff, CodeSearch}
+	return []Tool{Unknown, TaskDone, CodeComment, ExplainResult, FileRead, FileFind, FileReadDiff, CodeSearch, GraphQuery, GraphNeighbors}
 }
 
 // Name returns the tool's identifier name.

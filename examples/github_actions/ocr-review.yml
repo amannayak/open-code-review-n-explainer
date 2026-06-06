@@ -60,13 +60,10 @@ jobs:
           fetch-depth: 0  # Full history needed for merge-base diff
           ref: ${{ github.event_name != 'pull_request' && steps.pr-context.outputs.head_sha || '' }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Install OpenCodeReview
-        run: npm install -g @alibaba-group/open-code-review
+        run: |
+          curl -Lo ocr https://github.com/amannayak/open-code-review-n-explainer/releases/latest/download/opencodereview-linux-amd64
+          chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
 
       - name: Configure OCR
         run: |

@@ -18,7 +18,7 @@ ocr review --audience agent [user-args]
 - If the user provides `--from` and `--to`: pass through as-is.
 - (Optional) Provide `--background "requirement context"` to review whether the requirements are correctly implemented.
 - Capture full stdout. Set a 5-minute timeout.
-- If the `ocr` command is not found, install it by running `npm i -g @alibaba-group/open-code-review`.
+- If the `ocr` command is not found, build it from source: `git clone https://github.com/amannayak/open-code-review-n-explainer.git && cd open-code-review-n-explainer && make build && sudo cp dist/opencodereview /usr/local/bin/ocr`.
 
 ### Step 2: Filter and Evaluate
 

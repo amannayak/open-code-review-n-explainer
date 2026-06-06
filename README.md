@@ -1,322 +1,258 @@
 <p align="center">
-  <a href="https://alibaba.github.io/open-code-review/">
-    <img src="imgs/logo.svg" alt="OpenCodeReview logo" width="240" height="240">
-  </a>
+  <img src="imgs/image.png" alt="open-code-review-n-explainer logo" width="240" height="240">
 </p>
-<p align="center">The open source AI code review agent.</p>
+<p align="center"><strong>open-code-review-n-explainer</strong></p>
+<p align="center">A fork of <a href="https://github.com/alibaba/open-code-review">alibaba/open-code-review</a> — adds <code>ocr explain</code>, a read-only code tutor mode.</p>
 <p align="center">
-  <a href="https://www.npmjs.com/package/@alibaba-group/open-code-review"><img alt="npm" src="https://img.shields.io/npm/v/@alibaba-group/open-code-review?style=flat-square" /></a>
-  <a href="https://github.com/alibaba/open-code-review/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/alibaba/open-code-review/release.yml?style=flat-square" /></a>
+  <a href="https://github.com/amannayak/open-code-review-n-explainer"><img alt="This fork" src="https://img.shields.io/badge/fork-amannayak%2Fopen--code--review--n--explainer-35BD5F?style=flat-square" /></a>
+  <a href="https://github.com/alibaba/open-code-review"><img alt="Upstream" src="https://img.shields.io/badge/upstream-alibaba%2Fopen--code--review-blue?style=flat-square" /></a>
   <a href="https://github.com/alibaba/open-code-review/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/alibaba/open-code-review?style=flat-square" /></a>
-</p>
-<p align="center">
-  English | <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 ---
 
-## What is Open Code Review?
+> **This is a fork.** The upstream project is [alibaba/open-code-review](https://github.com/alibaba/open-code-review). This fork keeps the full review pipeline intact and adds one new command: `ocr explain`.
 
-Open Code Review is an AI-powered code review CLI tool. It originated as Alibaba Group's internal official AI code review assistant — over the past two years, it has served tens of thousands of developers and identified millions of code defects. After thorough validation at massive scale, we incubated it into an open source project for the community. Simply configure a model endpoint to get started.
+## What's different from upstream?
 
-It reads Git diffs, sends changed files to a configurable LLM via an agent with tool-use capabilities, and generates structured review comments with line-level precision. The agent can read full file contents, search the codebase, inspect other changed files for context, and produce deep reviews — not just surface-level diff feedback.
+The upstream `ocr review` reads Git diffs, sends changed files to a configurable LLM, and generates structured review comments with line-level precision. **This fork adds `ocr explain`** — a read-only tutor mode that deeply explains how existing code works, rather than critiquing changes to it.
 
-![Highlights](imgs/highlights-en.png)
+### What's added in this fork
 
-## Why Open Code Review?
+| Feature | Upstream | This fork |
+|---------|----------|-----------|
+| `ocr review` — AI code review on Git diffs | ✅ | ✅ |
+| `ocr explain` — read-only tutor mode | ❌ | ✅ |
+| Connected architecture synthesis | ❌ | ✅ |
+| Graphify graph backend integration | ❌ | ✅ |
+| Language-adaptive replies (responds in question's language) | ❌ | ✅ |
 
-### The Problem with General-Purpose Agents
+**Tutor mode is designed for increasingly agent-generated codebases** where the human maintainer needs deep understanding before changing anything. It explains files one by one, then synthesizes the connected architecture: entrypoints, modules, data flow, important symbols, dependencies, dependents, and gotchas.
 
-If you've used general-purpose agents like Claude Code with Skills for code review, you've likely encountered these pain points:
+Tutor mode never edits, stages, commits, or auto-fixes code.
 
-- **Incomplete coverage** — On larger changesets, agents tend to "cut corners," selectively reviewing only some files and missing others.
-- **Position drift** — Reported issues frequently don't match the actual code location, with line numbers or file references drifting off target.
-- **Unstable quality** — Natural-language-driven Skills are hard to debug, and review quality fluctuates significantly with minor prompt variations.
+---
 
-The root cause: a purely language-driven architecture lacks hard constraints on the review process.
+## Quick Start
 
-### Core Design: Deterministic Engineering × Agent Hybrid
-
-Open Code Review's core philosophy is to combine deterministic engineering with an agent, each handling what it does best.
-
-**Deterministic Engineering — Hard Constraints**
-
-For review steps that *must not go wrong*, engineering logic — not the language model — guarantees correctness:
-
-- **Precise file selection** — Determines exactly which files need review and which should be filtered, ensuring no important change is missed.
-- **Smart file bundling** — Groups related files into a single review unit (e.g., `message_en.properties` and `message_zh.properties` are bundled together). Each bundle runs as a sub-agent with isolated context — a divide-and-conquer strategy that stays stable on very large changesets and naturally supports concurrent review.
-- **Fine-grained rule matching** — Matches review rules to each file's characteristics, keeping the model's attention sharply focused and eliminating information noise at the source. Compared to purely language-driven rule guidance, template-engine-based rule matching is more stable and predictable.
-- **External positioning and reflection modules** — Independent comment-positioning and comment-reflection modules systematically improve both the location accuracy and content accuracy of AI feedback.
-
-**Agent — Dynamic Decision-Making**
-
-The agent's strengths are concentrated where they matter most — dynamic decisions and dynamic context retrieval:
-
-- **Scenario-tuned prompts** — Prompt templates deeply optimized for code review, improving effectiveness while reducing token consumption.
-- **Scenario-tuned toolset** — Distilled from deep analysis of tool-call traces in large-scale production data — including call frequency distributions, per-tool repetition rates, and the impact of new tools on the overall call chain — resulting in a purpose-built toolset that is more stable and predictable for code review than a generic agent toolkit.
-
-## How to Use
-
-### CLI
-
-#### Install
-
-**Via NPM (Recommended)**
+### 1. Install
 
 ```bash
-npm install -g @alibaba-group/open-code-review
-```
-
-After installation, the `ocr` command is available globally.
-
-**From GitHub Release**
-
-Download the latest binary from [GitHub Releases](https://github.com/alibaba/open-code-review/releases):
-
-```bash
-# macOS (Apple Silicon)
-curl -Lo ocr https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-darwin-arm64
-chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
-
-# macOS (Intel)
-curl -Lo ocr https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-darwin-amd64
-chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
-
-# Linux (x86_64)
-curl -Lo ocr https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-linux-amd64
-chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
-
-# Linux (ARM64)
-curl -Lo ocr https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-linux-arm64
-chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
-
-# Windows (x86_64) — move ocr.exe to a directory in your PATH
-curl -Lo ocr.exe https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-windows-amd64.exe
-
-# Windows (ARM64) — move ocr.exe to a directory in your PATH
-curl -Lo ocr.exe https://github.com/alibaba/open-code-review/releases/latest/download/opencodereview-windows-arm64.exe
-```
-
-**From Source**
-
-```bash
-git clone https://github.com/alibaba/open-code-review.git
-cd open-code-review
+git clone https://github.com/amannayak/open-code-review-n-explainer.git
+cd open-code-review-n-explainer
 make build
 sudo cp dist/opencodereview /usr/local/bin/ocr
 ```
 
-#### Quick Start
-
-**1. Configure LLM**
-
-**You must configure an LLM before reviewing code.**
+### 2. Configure LLM
 
 ```bash
-# Option A: Interactive config
+# Anthropic
 ocr config set llm.url https://api.anthropic.com/v1/messages
-ocr config set llm.auth_token your-api-key-here
+ocr config set llm.auth_token your-api-key
 ocr config set llm.model claude-opus-4-6
 ocr config set llm.use_anthropic true
 
-# Option B: Environment variables (highest priority)
-export OCR_LLM_URL=https://api.anthropic.com/v1/messages
-export OCR_LLM_TOKEN=your-api-key-here
-export OCR_LLM_MODEL=claude-opus-4-6
-export OCR_USE_ANTHROPIC=true
+# Local Ollama / LM Studio
+ocr config set llm.url http://localhost:11434/v1/chat/completions
+ocr config set llm.model gemma4:26b
+ocr config set llm.use_anthropic false
+ocr config set llm.allow_local_no_token true
 ```
 
 Config is stored in `~/.opencodereview/config.json`.
 
-It is also compatible with Claude Code environment variables (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_MODEL`) and parses `~/.zshrc` / `~/.bashrc` for those exports.
-
-**2. Test Connectivity**
+### 3. Test connectivity
 
 ```bash
 ocr llm test
 ```
 
-**3. Review**
+The agent will reply in the same language you ask in. To pin a specific language:
+
+```bash
+ocr config set language English
+```
+
+---
+
+## Usage
+
+### Code Review
 
 ```bash
 cd your-project
 
-# Workspace mode — review all staged, unstaged, and untracked changes
+# Review staged, unstaged, and untracked changes
 ocr review
 
-# Branch range — compare two refs
+# Review a branch range
 ocr review --from main --to feature-branch
 
-# Single commit
+# Review a single commit
 ocr review --commit abc123
 ```
 
-### Integrate with Coding Agents
+### Code Explanation (Tutor Mode)
 
-OCR can be seamlessly integrated into AI coding agents as a slash command, enabling code review directly within your agent workflow.
+#### Without Graphify — explain specific files or directories
 
-#### Option 1: Install as a Skill
-
-Use `npx` to install the OCR skill into your project:
+No extra dependencies needed. Pass any files or directories as arguments:
 
 ```bash
-npx skills add alibaba/open-code-review --skill open-code-review
+cd your-project
+
+ocr explain internal/agent cmd/main.go
+ocr explain src/auth src/api
 ```
 
-This installs the `open-code-review` skill from the [skills registry](skills/open-code-review/SKILL.md), which teaches your coding agent how to invoke `ocr` for code review, classify issues by priority, and optionally apply fixes.
+The agent reads those files, explains each one, and synthesizes what it can from the files you gave it.
 
-#### Option 2: Install as a Claude Code Plugin
+#### With Graphify — full connected architecture
 
-For [Claude Code](https://docs.anthropic.com/en/docs/claude-code), install the command plugin through the following command in Claude Code:
+For `--all-files` mode, tutor mode uses **Graphify** to build a dependency graph of the entire repository first. This lets it explain how every file connects to every other file — data flow, call chains, import relationships — not just individual files in isolation.
+
+**Install Graphify once** (requires Python; `uv` or `pipx` must already be installed):
 
 ```bash
-/plugin marketplace add alibaba/open-code-review
+ocr setup explain
+```
+
+`ocr setup explain` tries `uv tool install graphifyy` first, then `pipx install graphifyy`. If neither is available, install manually:
+
+```bash
+# via uv (recommended)
+uv tool install graphifyy
+
+# via pipx
+pipx install graphifyy
+
+# verify
+graphify --version
+```
+
+**Then run full-repo explanation:**
+
+```bash
+cd your-project
+
+ocr explain --all-files --out explain-out
+```
+
+Artifacts (per-file notes, architecture synthesis, graph JSON) are written to `explain-out/`.
+
+**Re-use an existing graph** (skips the graph build step):
+
+```bash
+ocr explain --all-files --graph graphify-out/graph.json
+```
+
+**Agent-friendly output:**
+
+```bash
+ocr explain --audience agent
+```
+
+---
+
+## Integrate with Coding Agents
+
+Both `ocr review` and `ocr explain` can be called from inside any AI coding agent (Claude Code, Cursor, etc.) as shell commands. The plugin and skill formats below register them as first-class slash commands.
+
+### Claude Code — plugin
+
+```bash
+/plugin marketplace add amannayak/open-code-review-n-explainer
 /plugin install open-code-review@open-code-review
 ```
 
-This registers the `/open-code-review:review` slash command, which runs OCR and automatically filters and fixes issues.
+This registers two slash commands in Claude Code:
+- `/open-code-review:review` — runs `ocr review`, filters findings, and optionally applies fixes
+- `/open-code-review:explain` — runs `ocr explain` in read-only tutor mode
 
-#### Option 3: Copy the Command File Directly
+### Claude Code — copy command files directly
 
-For a quick setup without any package manager, simply copy the command file to use the `/open-code-review` slash command in Claude Code.
-
-**Project-level** (shared with team via git):
+No package manager needed. Copy the command files into your project or home directory:
 
 ```bash
 mkdir -p .claude/commands
 curl -o .claude/commands/open-code-review.md \
-  https://raw.githubusercontent.com/alibaba/open-code-review/main/plugins/open-code-review/commands/review.md
+  https://raw.githubusercontent.com/amannayak/open-code-review-n-explainer/main/plugins/open-code-review/commands/review.md
+curl -o .claude/commands/explain.md \
+  https://raw.githubusercontent.com/amannayak/open-code-review-n-explainer/main/plugins/open-code-review/commands/explain.md
 ```
 
-**User-level** (personal global use across all projects):
+For user-level (all projects):
 
 ```bash
 mkdir -p ~/.claude/commands
 curl -o ~/.claude/commands/open-code-review.md \
-  https://raw.githubusercontent.com/alibaba/open-code-review/main/plugins/open-code-review/commands/review.md
+  https://raw.githubusercontent.com/amannayak/open-code-review-n-explainer/main/plugins/open-code-review/commands/review.md
+curl -o ~/.claude/commands/explain.md \
+  https://raw.githubusercontent.com/amannayak/open-code-review-n-explainer/main/plugins/open-code-review/commands/explain.md
 ```
 
-> **Prerequisite**: All integration methods require the `ocr` CLI to be installed and an LLM configured. See [Install](#install) and [Configure LLM](#1-configure-llm) above.
-
-### CI/CD Integration
-
-OCR can be integrated into CI/CD pipelines to automate code review on Merge Requests / Pull Requests.
-
-The core command for CI integration:
+### Claude Code — skill
 
 ```bash
-ocr review \
-  --from "origin/main" \
-  --to "origin/feature-branch" \
-  --format json
+npx skills add amannayak/open-code-review-n-explainer --skill open-code-review-n-explainer
 ```
 
-The `--format json` flag outputs machine-readable results suitable for parsing in CI scripts.
+### Other agents (Cursor, generic harness)
 
-See the [`examples/`](./examples/) directory for integration examples:
+The `ocr` binary is a plain CLI — any agent that can run shell commands can use it:
 
-- [`github_actions/`](./examples/github_actions/) — GitHub Actions integration example
-- [`gitlab_ci/`](./examples/gitlab_ci/) — GitLab CI integration example
+```bash
+# Review current changes
+ocr review --audience agent --format json
+
+# Explain a file or directory
+ocr explain --audience agent src/auth
+```
+
+Use `--audience agent` so output is compact and machine-readable. Use `--format json` on `review` for structured findings.
+
+---
 
 ## Commands
 
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `ocr review` | `ocr r` | Start a code review |
-| `ocr rules check <file>` | — | Preview which review rule applies to a file path |
-| `ocr config set <key> <value>` | — | Set configuration values |
-| `ocr llm test` | — | Test LLM connectivity |
-| `ocr viewer` | `ocr v` | Launch WebUI session viewer on `localhost:5483` |
-| `ocr version` | — | Show version info |
+| Command | Description |
+|---------|-------------|
+| `ocr review` | Start a code review |
+| `ocr explain` | Explain code in tutor mode |
+| `ocr setup explain` | Install Graphify for connected explanations |
+| `ocr rules check <file>` | Preview which review rule applies to a file |
+| `ocr config set <key> <value>` | Set a configuration value |
+| `ocr llm test` | Test LLM connectivity |
+| `ocr viewer` | Launch WebUI session viewer on `localhost:5483` |
+| `ocr version` | Show version info |
 
-### `ocr review` Flags
+### `ocr review` flags
 
-| Flag | Shorthand | Default | Description |
-|------|-----------|---------|-------------|
-| `--repo` | — | current dir | Git repository root |
-| `--from` | — | — | Source ref (e.g., `main`) |
-| `--to` | — | — | Target ref (e.g., `feature-branch`) |
-| `--commit` | `-c` | — | Single commit to review |
-| `--preview` | `-p` | `false` | Preview which files will be reviewed without running the LLM |
-| `--format` | `-f` | `text` | Output format: `text` or `json` |
-| `--concurrency` | — | `8` | Max concurrent file reviews |
-| `--timeout` | — | `10` | Concurrent task timeout in minutes |
-| `--audience` | — | `human` | `human` (show progress) or `agent` (summary only) |
-| `--rule` | — | — | Path to custom JSON review rules |
-| `--max-tools` | — | built-in | Max tool call rounds per file; only takes effect when greater than template default |
-| `--tools` | — | — | Path to custom JSON tools config |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--from` | — | Source ref (e.g. `main`) |
+| `--to` | — | Target ref |
+| `--commit`, `-c` | — | Single commit |
+| `--preview`, `-p` | `false` | Preview files without calling the LLM |
+| `--format`, `-f` | `text` | `text` or `json` |
+| `--concurrency` | `8` | Max concurrent file reviews |
+| `--audience` | `human` | `human` or `agent` |
+| `--rule` | — | Path to custom review rules JSON |
 
-## Examples
+### `ocr explain` flags
 
-```bash
-# Preview which files will be reviewed (no LLM calls)
-ocr review --preview
-ocr review -c abc123 -p
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--all-files` | `false` | Explain all files (requires Graphify) |
+| `--graph` | — | Path to an existing Graphify `graph.json` |
+| `--out` | — | Write artifacts to this directory |
+| `--audience` | `human` | `human` or `agent` |
+| `--background` | — | Learning context passed to the tutor |
+| `--max-files` | `50` | File limit per run |
+| `--preview`, `-p` | `false` | Preview files without calling the LLM |
 
-# Review workspace changes with default settings
-ocr review
-
-# Review branch diff with higher concurrency
-ocr review --from main --to my-feature --concurrency 4
-
-# Review a specific commit with verbose JSON output
-ocr review --commit abc123 --format json --audience agent
-
-# Use custom review rules
-ocr review --rule /path/to/my-rules.json
-
-# Preview which rule applies to a file
-ocr rules check src/main/java/com/example/Foo.java
-ocr rules check --rule custom.json src/main/resources/mapper/UserMapper.xml
-
-# View review session history in browser
-ocr viewer
-ocr viewer --addr :3000
-```
-
-### Viewer security
-
-The viewer serves session JSONL contents (LLM request messages and responses) over HTTP. It enforces a Host-header allowlist on every request: loopback names (`localhost`, `127.0.0.0/8`, `::1`) and the concrete bind host are always allowed. Wildcard binds (`--addr :3000`, `--addr 0.0.0.0:3000`) and other non-loopback Hostnames must be added via the `OCR_VIEWER_ALLOWED_HOSTS` environment variable (comma-separated):
-
-```bash
-OCR_VIEWER_ALLOWED_HOSTS=review.internal,ocr.lan ocr viewer --addr :3000
-```
-
-This blocks DNS-rebinding attacks against the local viewer.
-
-## Review Rules
-
-OCR resolves review rules using a four-layer priority chain. Each layer uses first-match-wins: if a file path matches a pattern, that rule is used; otherwise it falls through to the next layer.
-
-| Priority | Source | Path | Description |
-|----------|--------|------|-------------|
-| 1 (highest) | `--rule` flag | User-specified path | CLI explicit override |
-| 2 | Project config | `<repoDir>/.opencodereview/rule.json` | Per-project rules, can be committed to git |
-| 3 | Global config | `~/.opencodereview/rule.json` | User-wide personal preferences |
-| 4 (lowest) | System default | Embedded `system_rules.json` | Built-in rules covering common languages and file types |
-
-### Rule File Format
-
-Layers 1–3 share the same JSON format:
-
-```json
-{
-  "rules": [
-    {
-      "path": "force-api/**/*.java",
-      "rule": "All new methods must validate required parameters for null values"
-    },
-    {
-      "path": "**/*mapper*.xml",
-      "rule": "Check SQL for injection risks, parameter errors, and missing closing tags"
-    }
-  ]
-}
-```
-
-- `path` supports `**` recursive matching and `{java,kt}` brace expansion.
-- Within each layer, rules are evaluated in declaration order — the first match wins.
-- If a rule file does not exist, it is silently skipped.
+---
 
 ## Configuration Reference
 
@@ -328,44 +264,66 @@ Config file: `~/.opencodereview/config.json`
 | `llm.auth_token` | string | `sk-xxxxxxx` |
 | `llm.model` | string | `claude-opus-4-6` |
 | `llm.use_anthropic` | boolean | `true` \| `false` |
-| `language` | string | `English` \| `Chinese` (default: Chinese) |
+| `llm.allow_local_no_token` | boolean | `true` for local endpoints |
+| `language` | string | `English` — omit to reply in the question's language |
 | `telemetry.enabled` | boolean | `true` \| `false` |
-| `telemetry.exporter` | string | `console` \| `otlp` |
-| `telemetry.otlp_endpoint` | string | OTLP collector address |
-| `telemetry.content_logging` | boolean | Include prompts in telemetry |
 
-Environment variables take precedence over the config file.
-
-### Environment Variables
+### Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `OCR_LLM_URL` | LLM API endpoint URL |
-| `OCR_LLM_TOKEN` | API key / auth token |
+| `OCR_LLM_URL` | LLM endpoint URL |
+| `OCR_LLM_TOKEN` | API key |
 | `OCR_LLM_MODEL` | Model name |
 | `OCR_USE_ANTHROPIC` | `true` = Anthropic, `false` = OpenAI |
 
+---
 
-## Telemetry
+## Review Rules
 
-OpenTelemetry integration for observability (spans, metrics). Disabled by default.
+OCR resolves review rules via a four-layer priority chain:
 
-```bash
-ocr config set telemetry.enabled true
-ocr config set telemetry.exporter otlp
-ocr config set telemetry.otlp_endpoint localhost:4317
+| Priority | Source | Path |
+|----------|--------|------|
+| 1 | `--rule` flag | CLI explicit override |
+| 2 | Project config | `<repoDir>/.opencodereview/rule.json` |
+| 3 | Global config | `~/.opencodereview/rule.json` |
+| 4 | System default | Embedded `system_rules.json` |
+
+Rule format:
+
+```json
+{
+  "rules": [
+    { "path": "**/*.java", "rule": "Validate all required parameters for null" },
+    { "path": "**/*mapper*.xml", "rule": "Check SQL for injection risks" }
+  ]
+}
 ```
 
-Set `telemetry.content_logging` to include LLM prompts and responses in exported data.
+---
+
+## CI/CD Integration
+
+```bash
+ocr review \
+  --from "origin/main" \
+  --to "origin/feature-branch" \
+  --format json
+```
+
+See [`examples/`](./examples/) for GitHub Actions and GitLab CI integration examples.
+
+---
+
+## Upstream Project
+
+This fork tracks [alibaba/open-code-review](https://github.com/alibaba/open-code-review). For the original project documentation, design rationale, and community, refer to the upstream repository.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding guidelines, and how to submit pull requests.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=alibaba/open-code-review&type=Date)](https://star-history.com/#alibaba/open-code-review&Date)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-[Apache-2.0](LICENSE) — Copyright 2026 Alibaba
+[Apache-2.0](LICENSE) — Upstream copyright 2026 Alibaba. Fork additions by contributors to this repository.

@@ -9,7 +9,7 @@ MR Created/Updated → GitLab Pipeline Triggered → OCR Reviews Diff → Discus
 ```
 
 1. When a Merge Request is opened or updated, the pipeline triggers
-2. It installs OCR via npm in a `node:20` Docker image
+2. It installs OCR from the GitHub releases binary in an `ubuntu:22.04` Docker image
 3. Runs `ocr review --from origin/<target> --to origin/<source> --format json` to analyze the diff
 4. Parses the JSON output and posts inline discussions on the MR using GitLab's Discussions API
 
@@ -86,7 +86,8 @@ OCR supports both OpenAI and Anthropic API formats:
 
 ```yaml
 script:
-  - npm install -g @alibaba-group/open-code-review@1.0.0
+  - curl -Lo ocr https://github.com/amannayak/open-code-review-n-explainer/releases/download/v1.0.0/opencodereview-linux-amd64
+  - chmod +x ocr && mv ocr /usr/local/bin/ocr
 ```
 
 ### Add custom review rules
@@ -127,7 +128,8 @@ To avoid re-reviewing on every push to an existing MR (and wasting LLM API token
 ```yaml
 script:
   # Install OpenCodeReview
-  - npm install -g @alibaba-group/open-code-review
+  - curl -Lo ocr https://github.com/amannayak/open-code-review-n-explainer/releases/latest/download/opencodereview-linux-amd64
+  - chmod +x ocr && mv ocr /usr/local/bin/ocr
 
   # Configure OCR
   - mkdir -p ~/.open-code-review

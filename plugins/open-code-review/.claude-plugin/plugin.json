@@ -1,6 +1,6 @@
 {
     "name": "open-code-review",
     "commands": "./commands",
-    "description": "Perform AI code review on Git diffs — supports workspace changes, branch ranges, and single commits with concurrent per-file analysis, codebase search, and deep context-aware review.",
+    "description": "Review Git diffs and explain code in tutor mode. Fork of alibaba/open-code-review adding ocr explain for read-only architecture explanation.",
     "version": "1.0.0"
 }

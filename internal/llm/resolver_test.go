@@ -115,3 +115,39 @@ func TestResolveEndpoint_ConfigFileStripsModelSuffix(t *testing.T) {
 		t.Errorf("expected source %q, got %q", "OCR config file", ep.Source)
 	}
 }
+
+func TestResolveEndpoint_LocalNoTokenFromEnv(t *testing.T) {
+	t.Setenv("OCR_LLM_URL", "http://localhost:11434/v1/chat/completions")
+	t.Setenv("OCR_LLM_TOKEN", "")
+	t.Setenv("OCR_LLM_MODEL", "gemma-local")
+	t.Setenv("OCR_USE_ANTHROPIC", "false")
+	t.Setenv("OCR_ALLOW_LOCAL_LLM_NO_TOKEN", "true")
+	t.Setenv("ANTHROPIC_BASE_URL", "")
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "")
+	t.Setenv("ANTHROPIC_MODEL", "")
+
+	ep, err := ResolveEndpoint(filepath.Join(t.TempDir(), "nonexistent.json"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ep.Token != "" {
+		t.Fatalf("token = %q, want empty", ep.Token)
+	}
+	if ep.Protocol != "openai" {
+		t.Fatalf("protocol = %q, want openai", ep.Protocol)
+	}
+}
+
+func TestResolveEndpoint_RejectsRemoteNoToken(t *testing.T) {
+	t.Setenv("OCR_LLM_URL", "https://api.example.com/v1/chat/completions")
+	t.Setenv("OCR_LLM_TOKEN", "")
+	t.Setenv("OCR_LLM_MODEL", "model")
+	t.Setenv("OCR_ALLOW_LOCAL_LLM_NO_TOKEN", "true")
+	t.Setenv("ANTHROPIC_BASE_URL", "")
+	t.Setenv("ANTHROPIC_AUTH_TOKEN", "")
+	t.Setenv("ANTHROPIC_MODEL", "")
+
+	if _, err := ResolveEndpoint(filepath.Join(t.TempDir(), "nonexistent.json")); err == nil {
+		t.Fatal("expected remote no-token endpoint to be rejected")
+	}
+}

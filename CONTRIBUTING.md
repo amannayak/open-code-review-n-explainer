@@ -2,7 +2,6 @@
 
 Thank you for your interest in contributing to OpenCodeReview! Every contribution matters — whether it's fixing a typo, reporting a bug, or implementing a new feature.
 
-[简体中文版](CONTRIBUTING.zh-CN.md)
 
 ## Code of Conduct
 
@@ -135,7 +134,7 @@ Documentation is a crucial part of OpenCodeReview. We welcome improvements to RE
 - Clarifying confusing explanations or adding missing context
 - Adding usage examples for commands or configuration options
 - Updating outdated content (e.g., after a feature change)
-- Translating or improving the Chinese documentation (`README.zh-CN.md`, `CONTRIBUTING.zh-CN.md`)
+- Updating outdated examples or adding missing context
 
 ### Documentation Workflow
 
@@ -145,12 +144,10 @@ Documentation is a crucial part of OpenCodeReview. We welcome improvements to RE
 
 ### Documentation Files
 
-| File                    | Purpose                              |
-| ----------------------- | ------------------------------------ |
-| `README.md`             | Main project documentation (English) |
-| `README.zh-CN.md`       | Chinese translation                  |
-| `CONTRIBUTING.md`       | Contribution guide (English)         |
-| `CONTRIBUTING.zh-CN.md` | Contribution guide (Chinese)         |
+| File             | Purpose                      |
+| ---------------- | ---------------------------- |
+| `README.md`      | Main project documentation   |
+| `CONTRIBUTING.md`| Contribution guide           |
 
 ## Submitting Changes
 

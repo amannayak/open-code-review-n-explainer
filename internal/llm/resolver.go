@@ -3,6 +3,7 @@ package llm
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,10 +22,11 @@ type ResolvedEndpoint struct {
 
 // Environment variable names for OCR-specific configuration.
 const (
-	envOCRLLMURL       = "OCR_LLM_URL"
-	envOCRLLMToken     = "OCR_LLM_TOKEN"
-	envOCRLLMModel     = "OCR_LLM_MODEL"
-	envOCRUseAnthropic = "OCR_USE_ANTHROPIC"
+	envOCRLLMURL            = "OCR_LLM_URL"
+	envOCRLLMToken          = "OCR_LLM_TOKEN"
+	envOCRLLMModel          = "OCR_LLM_MODEL"
+	envOCRUseAnthropic      = "OCR_USE_ANTHROPIC"
+	envOCRAllowLocalNoToken = "OCR_ALLOW_LOCAL_LLM_NO_TOKEN"
 )
 
 // Environment variable names from Claude Code configuration.
@@ -53,14 +55,14 @@ func ResolveEndpoint(configPath string) (ResolvedEndpoint, error) {
 		if err != nil {
 			return ResolvedEndpoint{}, fmt.Errorf("resolve %s: %w", s.name, err)
 		}
-		if ok && ep.URL != "" && ep.Token != "" && ep.Model != "" {
+		if ok && ep.URL != "" && ep.Model != "" && (ep.Token != "" || ep.AllowLocalNoToken()) {
 			ep.Source = s.name
 			ep.Model = stripModelSuffix(ep.Model)
 			return ep, nil
 		}
 	}
 
-	return ResolvedEndpoint{}, fmt.Errorf("no valid LLM endpoint configured; one of OCR_LLM_URL/OCR_LLM_TOKEN/OCR_LLM_MODEL, ~/.opencodereview/config.json, or ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN/ANTHROPIC_MODEL must be set")
+	return ResolvedEndpoint{}, fmt.Errorf("no valid LLM endpoint configured; one of OCR_LLM_URL/OCR_LLM_TOKEN/OCR_LLM_MODEL, ~/.opencodereview/config.json, or ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN/ANTHROPIC_MODEL must be set; for local OpenAI-compatible endpoints without a token, set llm.allow_local_no_token=true or OCR_ALLOW_LOCAL_LLM_NO_TOKEN=true")
 }
 
 // tryOCREnv reads OCR-specific environment variables.
@@ -68,7 +70,10 @@ func tryOCREnv() (ResolvedEndpoint, bool, error) {
 	url := os.Getenv(envOCRLLMURL)
 	token := os.Getenv(envOCRLLMToken)
 	model := os.Getenv(envOCRLLMModel)
-	if url == "" || token == "" || model == "" {
+	if url == "" || model == "" {
+		return ResolvedEndpoint{}, false, nil
+	}
+	if token == "" && !allowLocalNoToken(url, os.Getenv(envOCRAllowLocalNoToken)) {
 		return ResolvedEndpoint{}, false, nil
 	}
 
@@ -88,11 +93,12 @@ func tryOCREnv() (ResolvedEndpoint, bool, error) {
 
 // llmFileConfig represents the llm section in config.json.
 type llmFileConfig struct {
-	URL          string         `json:"url,omitempty"`
-	AuthToken    string         `json:"auth_token,omitempty"`
-	Model        string         `json:"model,omitempty"`
-	UseAnthropic *bool          `json:"use_anthropic,omitempty"` // pointer to distinguish unset from false
-	ExtraBody    map[string]any `json:"extra_body,omitempty"`
+	URL               string         `json:"url,omitempty"`
+	AuthToken         string         `json:"auth_token,omitempty"`
+	Model             string         `json:"model,omitempty"`
+	UseAnthropic      *bool          `json:"use_anthropic,omitempty"` // pointer to distinguish unset from false
+	ExtraBody         map[string]any `json:"extra_body,omitempty"`
+	AllowLocalNoToken bool           `json:"allow_local_no_token,omitempty"`
 }
 
 type configFile struct {
@@ -114,7 +120,10 @@ func tryOCRConfig(path string) (ResolvedEndpoint, bool, error) {
 		return ResolvedEndpoint{}, false, fmt.Errorf("parse config: %w", err)
 	}
 
-	if cfg.Llm.URL == "" || cfg.Llm.AuthToken == "" || cfg.Llm.Model == "" {
+	if cfg.Llm.URL == "" || cfg.Llm.Model == "" {
+		return ResolvedEndpoint{}, false, nil
+	}
+	if cfg.Llm.AuthToken == "" && !allowLocalNoTokenBool(cfg.Llm.URL, cfg.Llm.AllowLocalNoToken) {
 		return ResolvedEndpoint{}, false, nil
 	}
 
@@ -129,6 +138,48 @@ func tryOCRConfig(path string) (ResolvedEndpoint, bool, error) {
 	}
 
 	return ResolvedEndpoint{URL: cfg.Llm.URL, Token: cfg.Llm.AuthToken, Model: cfg.Llm.Model, Protocol: protocol, Source: "OCR config file", ExtraBody: cfg.Llm.ExtraBody}, true, nil
+}
+
+// AllowLocalNoToken reports whether this endpoint may omit auth because it is explicitly local.
+func (r ResolvedEndpoint) AllowLocalNoToken() bool {
+	return r.Token == "" && isLocalLLMURL(r.URL)
+}
+
+func allowLocalNoToken(rawURL, flag string) bool {
+	lower := strings.ToLower(strings.TrimSpace(flag))
+	return allowLocalNoTokenBool(rawURL, lower == "true" || lower == "1" || lower == "yes")
+}
+
+func allowLocalNoTokenBool(rawURL string, allowed bool) bool {
+	return allowed && isLocalLLMURL(rawURL)
+}
+
+func isLocalLLMURL(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	return host == "localhost" || host == "127.0.0.1" || host == "::1" ||
+		strings.HasPrefix(host, "10.") ||
+		strings.HasPrefix(host, "192.168.") ||
+		isPrivate172(host)
+}
+
+func isPrivate172(host string) bool {
+	if !strings.HasPrefix(host, "172.") {
+		return false
+	}
+	parts := strings.Split(host, ".")
+	if len(parts) < 2 {
+		return false
+	}
+	switch parts[1] {
+	case "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31":
+		return true
+	default:
+		return false
+	}
 }
 
 // tryCCEnv reads Claude Code environment variables.

@@ -110,6 +110,78 @@ type reviewOptions struct {
 	showHelp       bool
 }
 
+// --- explain subcommand options ---
+
+type explainOptions struct {
+	repoDir       string
+	ref           string
+	graphPath     string
+	outDir        string
+	outputFormat  string
+	audience      string
+	background    string
+	maxFiles      int
+	maxTools      int
+	perRunTimeout int
+	allFiles      bool
+	preview       bool
+	showHelp      bool
+	targets       []string
+}
+
+func parseExplainFlags(args []string) (explainOptions, error) {
+	a := newOcrFlagSet("ocr explain")
+
+	opts := explainOptions{}
+
+	a.StringVar(&opts.repoDir, "repo", "", "root directory of the git repository (default: current dir)")
+	a.StringVar(&opts.ref, "ref", "", "git ref to explain instead of the working tree")
+	a.StringVar(&opts.graphPath, "graph", "", "path to graphify-out/graph.json")
+	a.StringVar(&opts.outDir, "out", "", "write explanation artifacts to this directory")
+	a.StringVarP(&opts.outputFormat, "format", "f", "text", "output format: text or json")
+	a.StringVar(&opts.audience, "audience", "human", "output audience: human or agent")
+	a.StringVarP(&opts.background, "background", "b", "", "optional learning/onboarding context")
+	a.IntVar(&opts.maxFiles, "max-files", 50, "maximum files to explain")
+	a.IntVar(&opts.maxTools, "max-tools", 12, "maximum tool call rounds per explanation task")
+	a.IntVar(&opts.perRunTimeout, "timeout", 20, "explain timeout in minutes")
+	a.BoolVar(&opts.allFiles, "all-files", false, "explain every selected file and synthesize connected architecture")
+	a.BoolVarP(&opts.preview, "preview", "p", false, "preview which files will be explained without running the LLM")
+
+	if err := a.Parse(args); err != nil {
+		return opts, fmt.Errorf("parse flags: %w", err)
+	}
+
+	opts.showHelp = a.showHelp
+	if opts.showHelp {
+		return opts, nil
+	}
+	opts.targets = a.fs.Args()
+
+	switch opts.outputFormat {
+	case "text", "json":
+	default:
+		return opts, fmt.Errorf("invalid --format value %q: must be 'text' or 'json'", opts.outputFormat)
+	}
+
+	switch opts.audience {
+	case "human", "agent":
+	default:
+		return opts, fmt.Errorf("invalid --audience value %q: must be 'human' or 'agent'", opts.audience)
+	}
+
+	if opts.maxFiles <= 0 {
+		return opts, fmt.Errorf("--max-files must be positive")
+	}
+	if opts.maxTools <= 0 {
+		return opts, fmt.Errorf("--max-tools must be positive")
+	}
+	if opts.perRunTimeout < 0 {
+		return opts, fmt.Errorf("--timeout must be non-negative")
+	}
+
+	return opts, nil
+}
+
 func parseReviewFlags(args []string) (reviewOptions, error) {
 	a := newOcrFlagSet("ocr review")
 
@@ -211,6 +283,47 @@ Flags:
   --tools string          path to JSON tools config file (default: embedded)`)
 }
 
+func printExplainUsage() {
+	fmt.Println(`OpenCodeReview - Code Tutor Mode
+
+Usage:
+  ocr explain [flags] [path ...]
+  ocr e [flags] [path ...]             (alias)
+
+Examples:
+  # Explain the current project as a guided tour
+  ocr explain
+
+  # Explain specific files or directories without requiring Graphify
+  ocr explain internal/agent cmd/opencodereview
+
+  # Explain every selected file and synthesize connected architecture
+  ocr explain --all-files
+
+  # Use or point to a Graphify graph
+  ocr explain --all-files --graph graphify-out/graph.json
+
+  # Write full artifacts for large repos
+  ocr explain --all-files --out explain-out
+
+  # Preview selected files
+  ocr explain --preview
+
+Flags:
+  --all-files             explain every selected file and synthesize connected architecture
+  --audience string       output audience: human or agent (default "human")
+  -b, --background string optional learning/onboarding context
+  -f, --format string     output format: text or json (default "text")
+  --graph string          path to graphify-out/graph.json
+  --max-files int         maximum files to explain (default 50)
+  --max-tools int         maximum tool call rounds per explanation task (default 12)
+  --out string            write explanation artifacts to this directory
+  -p, --preview           preview which files will be explained without running the LLM
+  --ref string            git ref to explain instead of the working tree
+  --repo string           root directory of the git repository (default: current dir)
+  --timeout int           explain timeout in minutes (default 20)`)
+}
+
 // --- config subcommand ---
 
 type configAction struct {
@@ -250,9 +363,10 @@ Examples:
   ocr config set llm.url https://xx/v1/openai/chat/completions
   ocr config set llm.auth_token xxxxxxxxxx
   ocr config set llm.model claude-opus-4-6
+  ocr config set llm.allow_local_no_token true
   ocr config set llm.extra_body '{"thinking":{"type":"disabled"}}'
   ocr config set language English
   ocr config set telemetry.enabled true
 
-Supported keys: llm.url, llm.auth_token, llm.model, llm.use_anthropic, llm.extra_body, language, telemetry.enabled, telemetry.exporter, telemetry.otlp_endpoint, telemetry.content_logging`)
+Supported keys: llm.url, llm.auth_token, llm.model, llm.use_anthropic, llm.allow_local_no_token, llm.extra_body, language, telemetry.enabled, telemetry.exporter, telemetry.otlp_endpoint, telemetry.content_logging`)
 }

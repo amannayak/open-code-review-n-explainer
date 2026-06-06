@@ -12,7 +12,7 @@ Comment with trigger keyword ↗
 
 1. When a PR is opened, synchronized, or reopened, the workflow triggers
 2. Alternatively, when a comment containing `/open-code-review` or `@open-code-review` is posted on a PR, the workflow triggers
-3. It installs OCR via `npm install -g @alibaba-group/open-code-review`
+3. It installs OCR from the GitHub releases binary
 4. Runs `ocr review --from origin/<base> --to origin/<head> --format json` to analyze the diff
 5. Parses the JSON output and posts inline review comments on the PR using GitHub's Pull Request Review API
 
@@ -79,7 +79,9 @@ if: |
 
 ```yaml
 - name: Install OpenCodeReview
-  run: npm install -g @alibaba-group/open-code-review@1.0.0
+  run: |
+    curl -Lo ocr https://github.com/amannayak/open-code-review-n-explainer/releases/download/v1.0.0/opencodereview-linux-amd64
+    chmod +x ocr && sudo mv ocr /usr/local/bin/ocr
 ```
 
 ### Add custom review rules

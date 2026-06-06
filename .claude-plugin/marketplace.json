@@ -1,14 +1,14 @@
 {
-  "name": "open-code-review",
+  "name": "open-code-review-n-explainer",
   "owner": {
-    "name": "alibaba"
+    "name": "amannayak"
   },
-  "description": "AI-powered code review agent that reads Git diffs, analyzes changed files with LLM tool-use capabilities, and generates structured line-level review comments with cross-referential context awareness.",
+  "description": "AI-powered code review and code explanation agent. Reviews Git diffs with line-level precision and explains existing code in read-only tutor mode — architecture, data flow, dependencies, and gotchas.",
   "plugins": [
     {
       "name": "open-code-review",
       "source": "./plugins/open-code-review",
-      "description": "Perform AI code review on Git diffs — supports workspace changes, branch ranges, and single commits with concurrent per-file analysis, codebase search, and deep context-aware review.",
+      "description": "Review Git diffs and explain code. Supports workspace changes, branch ranges, and single commits. Tutor mode explains files and synthesizes connected architecture without editing anything.",
       "version": "1.0.0",
       "license": "Apache-2.0"
     }

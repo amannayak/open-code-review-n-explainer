@@ -46,6 +46,10 @@ func dispatch() error {
 		return nil
 	case "review", "r":
 		return runReview(args[1:])
+	case "explain", "e":
+		return runExplain(args[1:])
+	case "setup":
+		return runSetup(args[1:])
 	case "config":
 		return runConfig(args[1:])
 	case "llm":
@@ -70,6 +74,8 @@ Usage:
 
 Commands:
   review, r    Start a code review
+  explain, e   Explain project code in tutor mode
+  setup        Install optional helper dependencies
   rules        Inspect and debug review rules
   config       Manage configuration settings
   llm          LLM utility commands
@@ -79,11 +85,15 @@ Commands:
 Examples:
   ocr review --from master --to dev        Review diff range
   ocr review --commit abc123               Review a single commit
+  ocr explain                              Explain the current project
+  ocr explain --all-files --out explain-out Explain every file and write artifacts
+  ocr setup explain                        Install Graphify for connected explanations
   ocr config set llm.model opus-4-6        Set a config value
   ocr llm test                             Test LLM connectivity
   ocr version                              Show version info
 
 Use "ocr review -h" for more information about review.
+Use "ocr explain -h" for more information about tutor mode.
 Use "ocr rules -h" for more information about rules.
 Use "ocr config" for more information about config.
 Use "ocr llm" for more information about LLM utilities.

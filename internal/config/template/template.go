@@ -42,18 +42,15 @@ func applyLanguage(conv *LlmConversation, instruction string) {
 	}
 }
 
-// resolveLang returns the resolved language name for the instruction.
-func resolveLang(lang string) string {
-	if lang == "" {
-		return "Chinese"
-	}
-	return lang
-}
-
 // ApplyLanguage injects a language directive into all system-role messages
 // across MAIN_TASK, PLAN_TASK (if set), and MEMORY_COMPRESSION_TASK.
+// When lang is empty, no directive is injected and the LLM responds in
+// whatever language the user's question is written in.
 func (t *Template) ApplyLanguage(lang string) {
-	instruction := "\n\nAlways respond in " + resolveLang(lang) + "."
+	if lang == "" {
+		return
+	}
+	instruction := "\n\nAlways respond in " + lang + "."
 	applyLanguage(&t.MainTask, instruction)
 	if t.PlanTask != nil {
 		applyLanguage(t.PlanTask, instruction)

@@ -16,14 +16,15 @@ stages:
 
 code-review:
   stage: review
-  image: node:20
+  image: ubuntu:22.04
   only:
     - merge_requests
   variables:
     GIT_DEPTH: 0  # Full history needed for merge-base diff
   script:
     # Install OpenCodeReview
-    - npm install -g @alibaba-group/open-code-review
+    - curl -Lo ocr https://github.com/amannayak/open-code-review-n-explainer/releases/latest/download/opencodereview-linux-amd64
+    - chmod +x ocr && mv ocr /usr/local/bin/ocr
 
     # Configure OCR
     - mkdir -p ~/.open-code-review

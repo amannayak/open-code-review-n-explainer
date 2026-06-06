@@ -1,27 +1,27 @@
 ---
-name: open-code-review
+name: open-code-review-n-explainer
 description: >
-  Performs AI-powered code review on Git changes using the `ocr` CLI from
-  alibaba/open-code-review. Use when the user asks to review code, review
+  Performs AI-powered code review and read-only code explanation using the `ocr` CLI from
+  amannayak/open-code-review-n-explainer. Use when the user asks to review code, review
   a pull request, review staged/unstaged changes, review a commit, or
-  compare branches for code quality issues. Produces line-level review
+  compare branches for code quality issues. Also use when the user asks to
+  explain a project, directory, file, symbol, or code flow. Produces line-level review
   comments and can automatically apply fixes when requested. With appropriate
   review rules, can detect various types of issues including bugs, security
   vulnerabilities, performance problems, and code quality concerns.
 license: Apache-2.0
 compatibility: >
-  Requires the `ocr` CLI installed (via `npm install -g
-  @alibaba-group/open-code-review` or GitHub release binary). Requires a
-  configured LLM (Anthropic or OpenAI-compatible) before first run.
+  Requires the `ocr` CLI installed (build from source or GitHub release binary).
+  Requires a configured LLM (Anthropic or OpenAI-compatible) before first run.
 metadata:
-  author: alibaba
-  homepage: https://github.com/alibaba/open-code-review
+  author: amannayak
+  homepage: https://github.com/amannayak/open-code-review-n-explainer
   version: "1.0.0"
 ---
 
 # Open Code Review
 
-A skill for invoking [open-code-review](https://github.com/alibaba/open-code-review) (`ocr`) — an open-source AI code review CLI that reads Git diffs and generates structured, line-level review comments.
+A skill for invoking [open-code-review-n-explainer](https://github.com/amannayak/open-code-review-n-explainer) (`ocr`) — a fork of alibaba/open-code-review that adds read-only tutor mode via `ocr explain`. Generates structured, line-level review comments and can deeply explain code architecture.
 
 ## Prerequisites check
 
@@ -35,10 +35,12 @@ which ocr || echo "NOT INSTALLED"
 ocr llm test
 ```
 
-If `ocr` is not installed, install it first:
+If `ocr` is not installed, build from source:
 
 ```bash
-npm install -g @alibaba-group/open-code-review
+git clone https://github.com/amannayak/open-code-review-n-explainer.git
+cd open-code-review-n-explainer && make build
+sudo cp dist/opencodereview /usr/local/bin/ocr
 ```
 
 If `ocr llm test` fails, the user must configure an LLM. Guide them with one of these options:
@@ -61,9 +63,18 @@ ocr config set llm.model claude-opus-4-6
 ocr config set llm.use_anthropic true
 ```
 
+**Local OpenAI-compatible models:**
+
+```bash
+ocr config set llm.url http://localhost:11434/v1/chat/completions
+ocr config set llm.model gemma-local
+ocr config set llm.use_anthropic false
+ocr config set llm.allow_local_no_token true
+```
+
 Stop here and ask the user to provide credentials — never invent or hardcode API keys.
 
-## Workflow
+## Review Workflow
 
 ### Step 1: Gather Business Context
 
@@ -86,7 +97,7 @@ ocr review --audience agent --background "business context here" [user-args]
 - **Timeout**: default timeout is 10 minutes per file; adjust with `--timeout <minutes>`
 - **Concurrency**: default concurrency is 8 file workers; reduce with `--concurrency <n>` if rate limits are hit
 - **Preview mode**: use `--preview` or `-p` to preview which files will be reviewed without running the LLM
-- **Installation**: if `ocr` command is not found, install it by running `npm i -g @alibaba-group/open-code-review`
+- **Installation**: if `ocr` command is not found, build from source: `git clone https://github.com/amannayak/open-code-review-n-explainer.git && cd open-code-review-n-explainer && make build && sudo cp dist/opencodereview /usr/local/bin/ocr`
 
 **Common invocation patterns:**
 
@@ -224,8 +235,53 @@ After the review completes, verify success by checking:
 
 If errors occurred, check the stderr warnings for details about which files failed and why.
 
+## Explain Workflow
+
+Use tutor mode when the user asks to understand code rather than critique or fix it.
+
+### Step 1: Run Explanation
+
+```bash
+ocr explain --audience agent [user-args]
+```
+
+Argument handling:
+
+- Specific file or directory: pass paths through, e.g. `ocr explain --audience agent internal/agent`
+- Whole project, default limit: `ocr explain --audience agent`
+- Every file plus connected architecture: `ocr explain --audience agent --all-files`
+- Large repo artifacts: `ocr explain --audience agent --all-files --out explain-out`
+- Existing Graphify graph: `ocr explain --audience agent --all-files --graph graphify-out/graph.json`
+
+For `--all-files`, Graphify is required. If missing, run:
+
+```bash
+ocr setup explain
+```
+
+or tell the user to run:
+
+```bash
+uv tool install graphifyy
+```
+
+### Step 2: Report
+
+Preserve the tutor structure:
+
+- project overview
+- file-by-file explanations
+- connected architecture
+- runtime/data flow
+- dependencies and dependents
+- gotchas and study notes
+
+### Step 3: Stay Read-Only
+
+Do not edit files, apply fixes, stage changes, or commit code as part of tutor mode. If the user asks to change code after an explanation, treat that as a separate implementation request.
+
 ## References
 
-- Full docs: https://github.com/alibaba/open-code-review
-- NPM package: https://www.npmjs.com/package/@alibaba-group/open-code-review
-- Issue tracker: https://github.com/alibaba/open-code-review/issues
+- Full docs: https://github.com/amannayak/open-code-review-n-explainer
+- Upstream project: https://github.com/alibaba/open-code-review
+- Issue tracker: https://github.com/amannayak/open-code-review-n-explainer/issues
