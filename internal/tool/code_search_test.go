@@ -60,14 +60,15 @@ func TestBuildGrepArgs_PerlRegexp(t *testing.T) {
 	args := p.buildGrepArgs("foo", false, true, nil)
 
 	assertContains(t, args, "-P")
-	assertNotContains(t, args, "-E")
+	assertNotContains(t, args, "-F")
 }
 
-func TestBuildGrepArgs_ExtendedRegexp(t *testing.T) {
+func TestBuildGrepArgs_FixedString(t *testing.T) {
 	p := NewCodeSearch(&FileReader{RepoDir: "/tmp", Ref: ""})
 	args := p.buildGrepArgs("foo", false, false, nil)
 
-	assertContains(t, args, "-E")
+	assertContains(t, args, "-F")
+	assertNotContains(t, args, "-E")
 	assertNotContains(t, args, "-P")
 }
 
@@ -196,6 +197,55 @@ func TestGitGrep_CommitMode_WithBadPathspec(t *testing.T) {
 	}
 	if result != "No matches found" {
 		t.Errorf("expected 'No matches found' with bad pathspec, got: %s", result)
+	}
+}
+
+func TestGitGrep_LiteralWithRegexMetaChars(t *testing.T) {
+	dir := setupTestRepo(t)
+	p := NewCodeSearch(&FileReader{RepoDir: dir, Ref: "", Mode: ModeWorkspace})
+	result, err := p.gitGrep("Hello()", false, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "hello.go") {
+		t.Errorf("expected hello.go in result for literal 'Hello()' search, got: %s", result)
+	}
+}
+
+func TestGitGrep_CommitMode_LiteralWithRegexMetaChars(t *testing.T) {
+	dir := setupTestRepo(t)
+	commit := getHeadCommit(t, dir)
+	p := NewCodeSearch(&FileReader{RepoDir: dir, Ref: commit, Mode: ModeCommit})
+	result, err := p.gitGrep("Hello()", false, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "hello.go") {
+		t.Errorf("expected hello.go in result for literal 'Hello()' search at commit, got: %s", result)
+	}
+}
+
+func TestGitGrep_InvalidRef_ReturnsError(t *testing.T) {
+	dir := setupTestRepo(t)
+	p := NewCodeSearch(&FileReader{RepoDir: dir, Ref: "nonexistent_ref_abc123", Mode: ModeCommit})
+	result, err := p.gitGrep("Hello", false, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "Error:") {
+		t.Errorf("expected error message for invalid ref, got: %s", result)
+	}
+}
+
+func TestGitGrep_PerlRegexp_InvalidPattern_ReturnsError(t *testing.T) {
+	dir := setupTestRepo(t)
+	p := NewCodeSearch(&FileReader{RepoDir: dir, Ref: "", Mode: ModeWorkspace})
+	result, err := p.gitGrep("(unclosed", false, true, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result, "Error:") {
+		t.Errorf("expected error message for invalid perl regexp, got: %s", result)
 	}
 }
 

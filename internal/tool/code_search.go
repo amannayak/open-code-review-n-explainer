@@ -1,13 +1,19 @@
 package tool
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
-const gitGrepMaxCount = 100
+const (
+	gitGrepMaxCount = 100
+	gitGrepTimeout  = 10 * time.Second
+)
 
 // CodeSearchProvider performs text search across the repository using git grep.
 type CodeSearchProvider struct {
@@ -51,7 +57,7 @@ func (p *CodeSearchProvider) buildGrepArgs(searchText string, caseSensitive bool
 	if usePerlRegexp {
 		cmdArgs = append(cmdArgs, "-P")
 	} else {
-		cmdArgs = append(cmdArgs, "-E")
+		cmdArgs = append(cmdArgs, "-F")
 	}
 
 	cmdArgs = append(cmdArgs, "-n", "--no-color")
@@ -69,22 +75,39 @@ func (p *CodeSearchProvider) buildGrepArgs(searchText string, caseSensitive bool
 	return cmdArgs
 }
 
+func (p *CodeSearchProvider) runGitGrep(cmdArgs []string) (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), gitGrepTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", cmdArgs...)
+	cmd.Dir = p.FileReader.RepoDir
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded && err != nil && cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == -1 {
+		return "", "", context.DeadlineExceeded
+	}
+	return stdout.String(), stderr.String(), err
+}
+
 func (p *CodeSearchProvider) gitGrep(searchText string, caseSensitive bool, usePerlRegexp bool, pathspec []string) (string, error) {
 	cmdArgs := p.buildGrepArgs(searchText, caseSensitive, usePerlRegexp, pathspec)
 
-	cmd := exec.Command("git", cmdArgs...)
-	cmd.Dir = p.FileReader.RepoDir
-
-	output, err := cmd.Output()
-	outStr := string(output)
+	outStr, errStr, err := p.runGitGrep(cmdArgs)
 
 	if err != nil {
-		if outStr == "" {
-			// git grep exits with code 1 for zero matches; treat as normal.
-			return "No matches found", nil
+		if err == context.DeadlineExceeded {
+			return "code_search timed out. Try narrowing file_patterns to a more specific path.", nil
 		}
-		// Rare: non-zero exit but stdout has partial output (e.g. signal
-		// during execution). Process whatever was captured.
+		if outStr == "" {
+			if errStr == "" {
+				return "No matches found", nil
+			}
+			return fmt.Sprintf("Error: %s", strings.TrimSpace(errStr)), nil
+		}
 	}
 
 	lines := strings.Split(strings.TrimRight(outStr, "\n"), "\n")
@@ -141,6 +164,10 @@ func (p *CodeSearchProvider) gitGrep(searchText string, caseSensitive bool, useP
 			sb.WriteString(fmt.Sprintf("%d|%s\n", m.lineNum, m.content))
 		}
 		sb.WriteString("\n")
+	}
+
+	if err != nil && errStr != "" {
+		sb.WriteString(fmt.Sprintf("Warning: %s\n", strings.TrimSpace(errStr)))
 	}
 
 	return sb.String(), nil
